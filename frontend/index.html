@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CareerGraph: find your skill gaps</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.9/standalone/umd/vis-network.min.js"></script>
+<style>
+:root{--ink:#0f1b3d;--ink2:#1a2a5c;--paper:#f4f6fb;--card:#fff;--line:#e1e6f2;--mut:#5d6a8a;--blue:#2f5bff;--mint:#12a37f;--amber:#e8920c;--violet:#7c5cf0;--r:14px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 Inter,system-ui,sans-serif}
+h1,h2,h3,.brand{font-family:'Bricolage Grotesque',Inter,sans-serif;letter-spacing:-.02em;margin:0}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.nav{background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:14px max(20px,calc((100% - 1180px)/2))}
+.brand{font-weight:800;font-size:1.25rem;display:flex;align-items:center;gap:10px}
+.nav small{color:#9fb0e0}
+.hero{background:linear-gradient(180deg,var(--ink),var(--ink2));color:#fff;padding:56px max(20px,calc((100% - 1180px)/2)) 90px;display:grid;grid-template-columns:1.1fr 1fr;gap:40px;align-items:center}
+.hero h1{font-size:clamp(2rem,4.4vw,3.4rem);line-height:1.05;font-weight:800;max-width:15ch}
+.hero p{color:#b9c6ee;max-width:46ch;font-size:1.08rem;margin:18px 0 26px}
+.cta{background:var(--amber);color:#1b1200;border:0;border-radius:99px;padding:13px 26px;font-weight:600}
+.route{width:100%;height:auto}
+.route text{font:600 13px Inter,sans-serif;fill:#dfe7ff}
+@media(max-width:860px){.hero{grid-template-columns:1fr;padding-bottom:70px}}
+@media(prefers-reduced-motion:no-preference){.route .train{animation:go 6s ease-in-out infinite alternate}@keyframes go{from{transform:translateX(0)}to{transform:translateX(420px)}}}
+.wrap{max-width:1180px;margin:-48px auto 60px;padding:0 20px;display:grid;grid-template-columns:400px 1fr;gap:22px;align-items:start}
+@media(max-width:980px){.wrap{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px;box-shadow:0 8px 28px rgba(15,27,61,.07)}
+.card+.card{margin-top:18px}
+h2{font-size:1.2rem;display:flex;align-items:center;gap:10px}
+.step{width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;font:700 .85rem Inter;display:grid;place-items:center}
+.sub{color:var(--mut);font-size:.9rem;margin:6px 0 14px}
+.search{width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:10px;font:inherit;margin-bottom:12px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;max-height:210px;overflow:auto;padding:2px}
+.chip{padding:6px 13px;border-radius:99px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:.88rem}
+.chip:hover{border-color:var(--blue)}
+.chip[aria-pressed=true]{background:var(--blue);border-color:var(--blue);color:#fff}
+.bar{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:.85rem;color:var(--mut)}
+.link{background:none;border:0;color:var(--blue);font-weight:600;padding:0 4px}
+.roles{display:grid;gap:10px}
+.role{text-align:left;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:12px 14px;color:var(--ink)}
+.role[aria-checked=true]{border-color:var(--blue);background:#f0f4ff}
+.role b{display:flex;justify-content:space-between}
+.meter{height:6px;background:var(--line);border-radius:4px;margin-top:8px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--blue);transition:width .6s}
+.go{width:100%;margin-top:18px;background:var(--blue);color:#fff;border:0;border-radius:12px;padding:14px;font-weight:600;font-size:1rem}
+.go:disabled{opacity:.5;cursor:not-allowed}
+.err{background:#fff1f0;color:#b42318;border:1px solid #f4c7c3;border-radius:10px;padding:10px 14px;margin-top:12px;font-size:.9rem}
+.err:empty{display:none}
+.empty{text-align:center;padding:50px 20px;color:var(--mut)}
+.empty h3{color:var(--ink);margin-bottom:6px}
+.top{display:flex;gap:26px;align-items:center;flex-wrap:wrap}
+.ring{position:relative;width:140px;height:140px}
+.ring svg{transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:12}
+.ring .bg{stroke:var(--line)}
+.ring .fg{stroke:var(--blue);stroke-linecap:round;stroke-dasharray:377;stroke-dashoffset:377;transition:stroke-dashoffset 1.1s cubic-bezier(.2,.8,.2,1)}
+.ring span{position:absolute;inset:0;display:grid;place-items:center;font:800 2rem 'Bricolage Grotesque'}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;flex:1;min-width:260px}
+.tile{background:var(--paper);border-radius:12px;padding:12px 14px}
+.tile b{display:block;font:800 1.7rem 'Bricolage Grotesque'}
+.tile small{color:var(--mut)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:24px}
+@media(max-width:700px){.cols{grid-template-columns:1fr}}
+h3{font-size:1rem;margin-bottom:10px}
+.gap{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.dots{display:flex;gap:3px}.dots i{width:8px;height:8px;border-radius:50%;background:var(--line)}.dots i.on{background:var(--amber)}
+.pill{display:inline-block;margin:0 6px 6px 0;padding:3px 11px;border-radius:99px;background:#e5f6f0;color:#0b7a5e;font-size:.85rem}
+.metro{list-style:none;margin:0;padding:0 0 0 6px;position:relative}
+.metro li{position:relative;padding:0 0 18px 30px;font-weight:500}
+.metro li:before{content:"";position:absolute;left:5px;top:6px;bottom:-6px;width:3px;background:var(--blue);border-radius:2px}
+.metro li:last-child:before{display:none}
+.metro li:after{content:"";position:absolute;left:-1px;top:3px;width:15px;height:15px;border-radius:50%;background:#fff;border:3px solid var(--blue)}
+.metro li.f:after{border-color:var(--violet)}.metro li.f:before{background:var(--violet)}
+.metro small{display:block;color:var(--mut);font-weight:400}
+#graph{height:360px;border:1px solid var(--line);border-radius:12px;margin-top:8px;background:#fafbff}
+.legend{display:flex;gap:16px;font-size:.82rem;color:var(--mut);margin-top:8px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
+.skel{height:90px;border-radius:12px;background:linear-gradient(90deg,#eef1f8,#f8f9fd,#eef1f8);background-size:200% 100%;animation:sh 1.2s infinite}
+@keyframes sh{to{background-position:-200% 0}}
+footer{text-align:center;color:var(--mut);font-size:.85rem;padding:0 20px 36px}
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="brand"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="6" cy="22" r="4" fill="#12a37f"/><circle cx="14" cy="8" r="4" fill="#e8920c"/><circle cx="23" cy="18" r="4" fill="#7c5cf0"/><path d="M6 22L14 8L23 18" stroke="#fff" stroke-width="2" fill="none"/></svg>CareerGraph</div>
+  <small>Intelligent career &amp; skill gap engine</small>
+</header>
+
+<section class="hero">
+  <div>
+    <h1>See exactly what stands between you and your next role.</h1>
+    <p>Tell us what you already know. CareerGraph maps it against real role requirements and draws the shortest learning route, with prerequisites in the right order.</p>
+    <button class="cta" onclick="document.getElementById('app').scrollIntoView()">Start mapping your skills</button>
+  </div>
+  <svg class="route" viewBox="0 0 520 190" role="img" aria-label="Example learning route from Python to Deep Learning">
+    <path d="M30 100H490" stroke="#2f5bff" stroke-width="6" stroke-linecap="round"/>
+    <g fill="#0f1b3d" stroke="#fff" stroke-width="4"><circle cx="40" cy="100" r="13"/><circle cx="180" cy="100" r="13"/><circle cx="330" cy="100" r="13"/><circle cx="480" cy="100" r="13"/></g>
+    <text x="40" y="68" text-anchor="middle">Python</text><text x="180" y="68" text-anchor="middle">Pandas</text>
+    <text x="330" y="68" text-anchor="middle">Machine Learning</text><text x="480" y="68" text-anchor="middle">Deep Learning</text>
+    <text x="40" y="145" text-anchor="middle" fill="#12a37f" style="fill:#4fd6b0">You are here</text>
+    <g class="train"><circle cx="40" cy="100" r="8" fill="#e8920c"/></g>
+  </svg>
+</section>
+
+<main class="wrap" id="app">
+  <div>
+    <section class="card">
+      <h2><span class="step">1</span>Your skills</h2>
+      <p class="sub">Select everything you can already do.</p>
+      <input class="search" id="q" placeholder="Search skills" aria-label="Search skills">
+      <div id="skills" class="chips" role="group" aria-label="Skills"></div>
+      <div class="bar"><span><b id="count">0</b> selected</span><span><button class="link" id="sample">Try a sample</button><button class="link" id="clear">Clear</button></span></div>
+    </section>
+    <section class="card">
+      <h2><span class="step">2</span>Target role</h2>
+      <p class="sub">Pick the role you are aiming for.</p>
+      <div id="roles" class="roles" role="radiogroup" aria-label="Target role"></div>
+      <button class="go" id="analyze">Analyze my gaps</button>
+      <div id="msg" class="err" role="alert"></div>
+    </section>
+  </div>
+
+  <section class="card" id="result" aria-live="polite">
+    <div class="empty"><h3>Your route will appear here</h3><p>Choose your skills and a target role, then select “Analyze my gaps”.</p></div>
+  </section>
+</main>
+<footer>CareerGraph is open source, powered by Neo4j Aura.</footer>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const S={skills:[],roles:[],have:new Set(),role:null,recs:{}};
+async function api(p,body){
+  const r=await fetch('/api'+p,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:undefined);
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.error||'Request failed ('+r.status+')');
+  return j;
+}
+function renderSkills(){
+  const f=$('#q').value.toLowerCase();
+  $('#skills').innerHTML=S.skills.filter(s=>s.toLowerCase().includes(f)).map(s=>
+    `<button class="chip" data-s="${esc(s)}" aria-pressed="${S.have.has(s)}">${esc(s)}</button>`).join('')||'<span class="sub">No skills match your search.</span>';
+  $('#count').textContent=S.have.size;
+}
+function renderRoles(){
+  $('#roles').innerHTML=S.roles.map(r=>{
+    const sc=S.recs[r];
+    return `<button class="role" role="radio" aria-checked="${S.role===r}" data-r="${esc(r)}"><b>${esc(r)}${sc!=null?`<span>${sc}%</span>`:''}</b>${sc!=null?`<div class="meter"><i style="width:${sc}%"></i></div>`:''}</button>`}).join('');
+}
+$('#skills').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;const s=b.dataset.s;S.have.has(s)?S.have.delete(s):S.have.add(s);S.recs={};renderSkills();renderRoles()};
+$('#roles').onclick=e=>{const b=e.target.closest('.role');if(!b)return;S.role=b.dataset.r;renderRoles()};
+$('#q').oninput=renderSkills;
+$('#clear').onclick=()=>{S.have.clear();S.recs={};renderSkills();renderRoles()};
+$('#sample').onclick=()=>{['Python','SQL','Git','HTML/CSS'].forEach(s=>S.skills.includes(s)&&S.have.add(s));renderSkills()};
+
+$('#analyze').onclick=async()=>{
+  $('#msg').textContent='';
+  if(!S.have.size)return $('#msg').textContent='Select at least one skill first.';
+  if(!S.role)return $('#msg').textContent='Choose a target role.';
+  const btn=$('#analyze');btn.disabled=true;btn.textContent='Analyzing...';
+  $('#result').innerHTML='<div class="skel"></div><div class="skel" style="margin-top:14px;height:200px"></div>';
+  try{
+    const skills=[...S.have];
+    const [d,recs]=await Promise.all([api('/analyze',{skills,role:S.role}),api('/recommend',{skills})]);
+    S.recs=Object.fromEntries(recs.map(r=>[r.role,r.score]));
+    renderRoles();renderResult(d);drawGraph(S.role);
+    if(innerWidth<980)$('#result').scrollIntoView();
+  }catch(e){$('#msg').textContent=e.message;$('#result').innerHTML='<div class="empty"><h3>Something went wrong</h3><p>Check that the backend and Neo4j Aura are running.</p></div>'}
+  btn.disabled=false;btn.textContent='Analyze my gaps';
+};
+
+function renderResult(d){
+  const best=Object.entries(S.recs).sort((a,b)=>b[1]-a[1])[0];
+  $('#result').innerHTML=`
+  <div class="top">
+    <div class="ring"><svg width="140" height="140" viewBox="0 0 140 140"><circle class="bg" cx="70" cy="70" r="60"/><circle class="fg" id="fg" cx="70" cy="70" r="60"/></svg><span>${d.score}%</span></div>
+    <div><h2 style="font-size:1.5rem">${esc(d.role)}</h2><p class="sub" style="margin:4px 0 14px">${d.score>=80?'You are nearly there.':d.score>=50?'A solid base. A few gaps to close.':'A fresh start. Follow the route below.'}${best&&best[0]!==d.role?` Best current fit: <b>${esc(best[0])}</b> (${best[1]}%).`:''}</p></div>
+    <div class="tiles"><div class="tile"><b>${d.have.length}</b><small>skills matched</small></div><div class="tile"><b>${d.missing.length}</b><small>skills missing</small></div><div class="tile"><b>${d.path.length}</b><small>steps to learn</small></div></div>
+  </div>
+  <div class="cols">
+    <div><h3>Learning route</h3>${d.path.length?`<ol class="metro">${d.path.map(p=>`<li class="${p.foundation?'f':''}">${esc(p.skill)}<small>${p.foundation?'Foundation for later skills':'Required for this role'}</small></li>`).join('')}</ol>`:'<p class="sub">No gaps. You match this role.</p>'}</div>
+    <div><h3>Gaps by importance</h3>${d.missing.map(m=>`<div class="gap"><span>${esc(m.skill)}</span><span class="dots" title="Importance ${m.level}/5">${[1,2,3,4,5].map(i=>`<i class="${i<=m.level?'on':''}"></i>`).join('')}</span></div>`).join('')||'<p class="sub">Nothing missing.</p>'}
+      <h3 style="margin-top:18px">Already covered</h3>${d.have.map(s=>`<span class="pill">${esc(s)}</span>`).join('')||'<p class="sub">No overlap yet.</p>'}</div>
+  </div>
+  <h3 style="margin-top:26px">Skill graph</h3>
+  <div id="graph" aria-label="Graph of skills required for ${esc(d.role)}"></div>
+  <div class="legend"><span><i style="background:#2f5bff"></i>Role</span><span><i style="background:#12a37f"></i>You have it</span><span><i style="background:#e8920c"></i>Gap</span><span>Dashed lines show prerequisites</span></div>`;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{$('#fg').style.strokeDashoffset=377*(1-d.score/100)}));
+}
+
+async function drawGraph(role){
+  try{
+    const g=await api('/graph/'+encodeURIComponent(role));
+    const color=n=>n.group==='role'?'#2f5bff':S.have.has(n.id)?'#12a37f':'#e8920c';
+    const nodes=g.nodes.map(n=>({...n,shape:'box',margin:10,borderWidth:0,color:{background:color(n)},font:{color:'#fff',face:'Inter',size:n.group==='role'?16:13}}));
+    new vis.Network($('#graph'),{nodes:new vis.DataSet(nodes),edges:new vis.DataSet(g.edges)},
+      {physics:{solver:'forceAtlas2Based',stabilization:{iterations:150}},edges:{color:'#9aa8cc',smooth:true,font:{size:10,color:'#5d6a8a',strokeWidth:0}},interaction:{hover:true}});
+  }catch(e){}
+}
+
+(async()=>{
+  try{
+    const [sk,ro]=await Promise.all([api('/skills'),api('/roles')]);
+    S.skills=sk.map(x=>x.name);S.roles=ro.map(x=>x.title);S.role=S.roles[0]||null;
+    renderSkills();renderRoles();
+    if(!S.skills.length)$('#msg').textContent='The graph is empty. Run "python seed.py" in the backend folder.';
+  }catch(e){$('#msg').textContent='Cannot reach the backend or Neo4j: '+e.message}
+})();
+</script>
+</body>
+</html>
